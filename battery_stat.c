@@ -2,7 +2,7 @@
 original by https://github.com/juzam/pi-top-battery-status
 */
 
-#define VERSION			"battery version 1.0"
+#define VERSION			"1.0"
 
 #include <cairo.h>
 #include <gtk/gtk.h>
