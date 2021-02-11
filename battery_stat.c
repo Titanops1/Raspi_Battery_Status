@@ -27,6 +27,10 @@ original by https://github.com/juzam/pi-top-battery-status
 #define LOW_BATTERY_WARNING   15     // Warning if capacity <= this value 
 #define SHUTDOWN_CAPACITY     10     // Automatic shutdown if capacity is <= this value
 
+#define BATTERY_CAPACITY		3500 // mAh
+#define BATTERY_POWER			29400 //mWh	8.4V*3500mAh
+
+
 cairo_surface_t *surface;
 gint width;
 gint height;
@@ -35,7 +39,7 @@ GtkWidget *StatusLabel1, *StatusLabel2, *StatusLabel3, *StatusLabel4;
 int lastCapacity;
 int shutdownCounter;
 long stat_good, stat_total;
-
+int  old_capacity = -1;
 static int lowBattery;
 
 FILE *logFile;
@@ -93,28 +97,39 @@ static gboolean timer_event(GtkWidget *widget)
 	float result_tmp = 0.00;
 	
 	char answer[MAX_ANSWER_SIZE];
-	int capacity, status;
+	int capacity, status, capacity_tmp;
 	int count, result;
 	char *sstatus;
 	int time;
 	
 	// capacity
 	count = 0;
-	capacity = -1;  
+	capacity = -1; 
+	capacity_tmp = -1;
 	while ((capacity  <  0) && (count++ < MAX_COUNT)) {
+		result = i2cget("/usr/sbin/i2cget -y 1 0x48 0x94 b 2>&1", answer);
+		if (result == 0) {
+			//if (count > 1) printf("count = %d, answer = %s\n", count, answer);	
+			sscanf(answer, "%x", &capacity_tmp);
+		}
 		result = i2cget("/usr/sbin/i2cget -y 1 0x48 0x94 b 2>&1", answer);
 		stat_total++;
 		if (result == 0) {
 			//if (count > 1) printf("count = %d, answer = %s\n", count, answer);	
 			sscanf(answer, "%x", &capacity);
-			result_tmp = ((capacity/255.0*3.3)*3);
-			//printLogEntry("Voltage =", result_tmp);
-			capacity = (result_tmp-7)/1.40*100;
-			//printLogEntry("capacity =", capacity);
-			if ((capacity > 100) || (capacity < 0))
-				capacity = -1;              // capacity out of limits
-			else
-			  stat_good++;
+			if(capacity == capacity_tmp){
+				old_capacity = capacity;
+				result_tmp = ((capacity/255.0*3.3)*3);
+				//printLogEntry("Voltage =", result_tmp);
+				capacity = (result_tmp-7)/1.40*100;
+				//printLogEntry("capacity =", capacity);
+				if ((capacity > 100) || (capacity < 0))
+					capacity = -1;              // capacity out of limits
+				else
+				stat_good++;
+			}else {
+				capacity = old_capacity;
+			}
 		}
 	}
 
