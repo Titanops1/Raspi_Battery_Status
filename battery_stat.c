@@ -30,6 +30,7 @@ original by https://github.com/juzam/pi-top-battery-status
 #define BATTERY_CAPACITY		3500 // mAh
 #define BATTERY_POWER			29400 //mWh	8.4V*3500mAh
 
+#define CURRENTSENSOR        0 // 1 if a Current sensor is applied
 
 cairo_surface_t *surface;
 gint width;
@@ -117,7 +118,7 @@ static gboolean timer_event(GtkWidget *widget)
 		if (result == 0) {
 			//if (count > 1) printf("count = %d, answer = %s\n", count, answer);	
 			sscanf(answer, "%x", &capacity);
-			if(capacity == capacity_tmp){
+			if(capacity == capacity_tmp){ //Read double from i2c to avoid peaks in the measurement
 				old_capacity = capacity;
 				result_tmp = ((capacity/255.0*3.3)*3);
 				//printLogEntry("Voltage =", result_tmp);
@@ -141,13 +142,18 @@ static gboolean timer_event(GtkWidget *widget)
 		lastCapacity = capacity;
 	}
 	
-	time = 600;
-	if (time <= 90) {
-		sprintf(timeStr, "Estimated life time: %d minutes\n", time);
-		sprintf(shortTimeStr, "%d min", time);
+	if(CURRENTSENSOR == 1) {
+	    time = 600;
+	    if (time <= 90) {
+		    sprintf(timeStr, "Estimated life time: %d minutes\n", time);
+		    sprintf(shortTimeStr, "%d min", time);
+	    }else {
+		    sprintf(timeStr, "Estimated life time: %.1f hours\n", (double)time / 60.0);  
+		    sprintf(shortTimeStr, "%.1f hours", (float)time / 60.0);
+	    }
 	}else {
-		sprintf(timeStr, "Estimated life time: %.1f hours\n", (double)time / 60.0);  
-		sprintf(shortTimeStr, "%.1f hours", (float)time / 60.0);
+	    sprintf(timeStr, "No Current Sensor available");
+	    sprintf(shortTimeStr, "NOP");
 	}
 	stat_good++;
 
